@@ -54,25 +54,42 @@ export function formatReset(iso: string): string {
   return `${month}/${day} ${hours}:${minutes}`;
 }
 
-function addBar(parent: HTMLElement, percent: number): void {
+function trackOf(percent: number): HTMLDivElement {
   const track = element('div', 'dsh-pet-usage-track');
   const fill = element('div', 'dsh-pet-usage-fill');
-  const width = Math.max(0, Math.min(100, percent));
-  fill.style.width = `${width}%`;
+  fill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
   track.appendChild(fill);
-  const label = element('span', 'dsh-pet-usage-percent', `${Math.round(percent)}%`);
-  parent.append(track, label);
+  return track;
+}
+
+/** 说明与重置时间同一行；两者都没有时不占位。 */
+function detailOf(text: string | undefined, reset: string): HTMLDivElement | null {
+  if (!text && reset === '') return null;
+  const detail = element('div', 'dsh-pet-usage-detail');
+  if (text) detail.appendChild(element('span', 'dsh-pet-usage-text', text));
+  if (reset !== '') detail.appendChild(element('span', 'dsh-pet-usage-reset', `重置 ${reset}`));
+  return detail;
 }
 
 function addRow(list: HTMLElement, row: UsageRow): void {
   const item = element('li', 'dsh-pet-usage-row');
-  const name = element('span', 'dsh-pet-usage-name', row.name);
-  item.appendChild(name);
-  if (row.percent !== undefined) addBar(item, row.percent);
-  if (row.text) item.appendChild(element('span', 'dsh-pet-usage-text', row.text));
-  if (row.resetsAt) {
-    const label = formatReset(row.resetsAt);
-    if (label) item.appendChild(element('span', 'dsh-pet-usage-reset', `重置 ${label}`));
+  item.appendChild(element('span', 'dsh-pet-usage-name', row.name));
+  const reset = row.resetsAt === undefined ? '' : formatReset(row.resetsAt);
+  if (row.percent !== undefined) {
+    item.appendChild(trackOf(row.percent));
+    item.appendChild(element('span', 'dsh-pet-usage-percent', `${Math.round(row.percent)}%`));
+    const detail = detailOf(row.text, reset);
+    if (detail) item.appendChild(detail);
+  } else if (row.text) {
+    item.appendChild(element('span', 'dsh-pet-usage-value', row.text));
+    if (reset !== '') {
+      const detail = element('div', 'dsh-pet-usage-detail');
+      detail.appendChild(element('span', 'dsh-pet-usage-reset', `重置 ${reset}`));
+      item.appendChild(detail);
+    }
+  } else {
+    const detail = detailOf(undefined, reset);
+    if (detail) item.appendChild(detail);
   }
   list.appendChild(item);
 }
