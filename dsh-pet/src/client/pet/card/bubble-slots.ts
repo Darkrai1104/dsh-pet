@@ -2,7 +2,7 @@
  * 气泡单槽：余额、说话、工作状态三种气泡的显隐、停留计时与优先级选择。
  * 不负责何时点亮与动画联动：tick 判定、抽动画、打日志都在 PetCard；也不负责外观，哑组件在 client/bubble.ts。
  * 依赖注入的 react 与两个气泡组件；三个停留计时器都归本模块清理。
- * 不变量：同一时刻只渲染一个气泡，优先级依次为终态任务、说话、余额、非终态任务。
+ * 不变量：同一时刻只渲染一个气泡，优先级依次为待办、用量、终态任务、说话、余额、环境、非终态任务。
  * @module dsh-pet/src/client/pet/card/bubble-slots
  */
 import { balancePageCount as balancePageCountOf, type BalanceState } from '../../../shared/balance/index.ts';
@@ -21,12 +21,14 @@ import type * as ReactNS from 'react';
 import type { jsx } from 'react/jsx-runtime';
 
 /** 当前该挂哪个气泡；`none` 表示哪个条件都不成立。 */
-export type BubbleSlot = 'todo' | 'work-terminal' | 'whisper' | 'balance' | 'env' | 'work' | 'none';
+export type BubbleSlot = 'todo' | 'usage' | 'work-terminal' | 'whisper' | 'balance' | 'env' | 'work' | 'none';
 
 /** 优先级判定的输入：全部是渲染期的既成事实，判定本身不产生副作用。 */
 export interface BubbleSlotInput {
   /** 待办面板是否打开；打开时独占槽位，其余气泡一律让位。 */
   todoOn: boolean;
+  /** 用量面板是否打开；仅次于待办。 */
+  usageOn: boolean;
   /** 工作状态是否为终态（success / error）。 */
   workTerminal: boolean;
   /** 工作气泡是否点亮。 */
@@ -64,6 +66,7 @@ export interface BubbleSlotInput {
 export function decideBubbleSlot(input: BubbleSlotInput): BubbleSlot {
   // 面板是用户主动打开的窗口：它占槽时其余气泡一律让位，关掉后按原规则恢复。
   if (input.todoOn) return 'todo';
+  if (input.usageOn) return 'usage';
   if (input.workTerminal && input.workOn && input.workText && input.workStatusEnabled) return 'work-terminal';
   if (input.whisperOn && input.whisperText) return 'whisper';
   if (input.balanceOn && input.balanceAvailable && (input.balanceEnabled || input.balanceManual)) return 'balance';
@@ -119,6 +122,9 @@ export interface BubbleSlotsRuntime {
 /** 待办面板气泡组件；props 与 `client/todo-bubble.ts` 的 TodoBubble 一致。 */
 export type TodoBubbleComponent = (props: { on: boolean; onClose: () => void }) => ReactNode;
 
+/** 用量面板气泡组件；props 与 `client/usage-bubble.ts` 的 UsageBubble 一致。 */
+export type UsageBubbleComponent = (props: { on: boolean; onClose: () => void }) => ReactNode;
+
 /** 环境气泡组件；props 与 `client/bubble.ts` 的 EnvBubble 一致。 */
 export type EnvBubbleComponent = (props: { state: EnvState; on: boolean }) => ReactNode;
 
@@ -130,6 +136,8 @@ export interface BubbleComponents {
   envBubble: EnvBubbleComponent;
   /** 待办面板气泡。 */
   todoBubble: TodoBubbleComponent;
+  /** 用量面板气泡。 */
+  usageBubble: UsageBubbleComponent;
   /** 说话气泡。 */
   whisperBubble: WhisperBubbleComponent;
 }
@@ -182,6 +190,12 @@ export interface BubbleSlots {
   hideTodo(): void;
   /** 开关待办面板：已开则收起，供快捷键使用。 */
   toggleTodo(): void;
+  /** 打开用量面板。 */
+  showUsage(): void;
+  /** 收起用量面板。 */
+  hideUsage(): void;
+  /** 开关用量面板：已开则收起。 */
+  toggleUsage(): void;
   /** 按优先级渲染当前该挂的气泡；无气泡时为 null。 */
   node(): ReactNode;
 }
@@ -198,6 +212,7 @@ export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComp
   const BalanceBubble = components.balanceBubble;
   const EnvBubble = components.envBubble;
   const TodoBubble = components.todoBubble;
+  const UsageBubble = components.usageBubble;
   const WhisperBubble = components.whisperBubble;
 
   return function useBubbleSlots(input: BubbleSlotsInput): BubbleSlots {
@@ -219,6 +234,7 @@ export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComp
     const whisperTimerRef = useRef<number | null>(null);
     // 待办面板：独占槽位，没有停留计时，显隐只由用户开关。
     const [todoOn, setTodoOn] = useState(false);
+    const [usageOn, setUsageOn] = useState(false);
     // 工作状态气泡：显隐与文本。
     const [workOn, setWorkOn] = useState(false);
     const [workText, setWorkText] = useState<string | null>(null);
@@ -333,10 +349,14 @@ export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComp
     const showTodo = (): void => setTodoOn(true);
     const hideTodo = (): void => setTodoOn(false);
     const toggleTodo = (): void => setTodoOn((on) => !on);
+    const showUsage = (): void => setUsageOn(true);
+    const hideUsage = (): void => setUsageOn(false);
+    const toggleUsage = (): void => setUsageOn((on) => !on);
 
     const node = (): ReactNode => {
       const slot = decideBubbleSlot({
         todoOn,
+        usageOn,
         workTerminal: input.workTerminal,
         workOn,
         workText,
@@ -351,6 +371,7 @@ export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComp
         envAvailable: input.env !== null,
       });
       if (slot === 'todo') return h(TodoBubble, { on: todoOn, onClose: hideTodo });
+      if (slot === 'usage') return h(UsageBubble, { on: usageOn, onClose: hideUsage });
       if (slot === 'env') {
         return input.env === null ? null : h(EnvBubble, { state: input.env, on: envOn });
       }
@@ -391,6 +412,7 @@ export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComp
       clearWhisper,
       cycleBalance,
       hideTodo,
+      hideUsage,
       hideWork,
       lightWork,
       node,
@@ -398,8 +420,10 @@ export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComp
       showBalance,
       showEnv,
       showTodo,
+      showUsage,
       showWhisper,
       toggleTodo,
+      toggleUsage,
       updateWorkText: setWorkText,
     };
   };

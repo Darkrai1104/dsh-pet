@@ -20,6 +20,7 @@ import type { SleepStore } from '../sleep.ts';
 import type { PollStateStore } from '../state.ts';
 import type { VoiceTarget } from '../surface.ts';
 import type { TodoStore } from '../todo/store.ts';
+import type { UsageIo, UsageItem } from '../usage/types.ts';
 import type { HearService } from '../voice/hear.ts';
 import type { VoiceService } from '../voice/speak.ts';
 import type { WorkStatusStore } from '../work-status.ts';
@@ -130,6 +131,10 @@ export interface PetRouteDeps {
   readonly memesUserRoot: string;
   /** 刷新余额（manual 表示用户主动触发；petId 表示这次只让该宠物显示，缺省不写归属）。 */
   readonly refreshBalance: (manual?: boolean, petId?: string) => Promise<void>;
+  /** 现查四个用量来源。路由只负责把 Grok Cookie 交进去。 */
+  readonly queryUsage: (io: UsageIo) => Promise<UsageItem[]>;
+  /** Grok 的 Cookie：环境变量优先，其次凭证库。没有时返回 undefined。 */
+  readonly readGrokCookie: () => Promise<string | undefined>;
   /** 查此刻的环境（城市 + 天气）；fresh 为真时跳过缓存强制重查。 */
   readonly environment: (opts?: { fresh?: boolean }) => Promise<EnvironmentFacts>;
   /** 生成一条碎碎念；image 给了就用这张图（需在池内），缺省 = 按配置随机抽一张或纯文本。

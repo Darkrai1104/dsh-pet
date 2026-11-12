@@ -70,7 +70,12 @@ class PetSprite {
     const m = this.size * WINDOW_MARGIN_RATIO;
     const fontConf = pet.font || config.font || S.DEFAULT_FONT;
     this.margin = {
-      t: Math.max(m, S.bubbleTopMarginPx(fontConf, this.size), S.todoPanelTopMarginPx(fontConf, this.size)),
+      t: Math.max(
+        m,
+        S.bubbleTopMarginPx(fontConf, this.size),
+        S.todoPanelTopMarginPx(fontConf, this.size),
+        S.usagePanelTopMarginPx(fontConf, this.size),
+      ),
       r: m,
       b: m,
       l: m,

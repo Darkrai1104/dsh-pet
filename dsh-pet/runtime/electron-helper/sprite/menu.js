@@ -348,6 +348,7 @@ Object.assign(PetSprite.prototype, {
       this.closeTodo();
       return;
     }
+    if (this.usagePanel) this.closeUsage();
     const panel = S.createTodoPanel({
       baseUrl: BASE + '/todos',
       onClose: () => this.closeTodo(),
@@ -374,7 +375,39 @@ Object.assign(PetSprite.prototype, {
     this.todoOpen = false;
     window.__dshPetDebug.todoOpen = false;
     this.renderBubble();
-    if (!this.menuOpen && !this.chatOpen) this.setInteractive(false);
+    if (!this.menuOpen && !this.chatOpen && !this.usageOpen) this.setInteractive(false);
+  },
+
+  // 用量面板开关：与待办同一套气泡槽和穿透守卫，两者同时只会开一个。
+  toggleUsage() {
+    if (this.usagePanel) {
+      this.closeUsage();
+      return;
+    }
+    if (this.todoPanel) this.closeTodo();
+    const panel = S.createUsagePanel({
+      baseUrl: BASE + '/usage',
+      onClose: () => this.closeUsage(),
+      keepOpenOn: (target) => typeof target?.closest === 'function' && target.closest('.pet-hit') !== null,
+    });
+    this.bubble.replaceChildren(panel.el);
+    this.usagePanel = panel;
+    this.usageOpen = true;
+    window.__dshPetDebug.usageOpen = true;
+    this.renderBubble();
+    this.syncInputBusy();
+    this.setInteractive(true);
+  },
+
+  closeUsage() {
+    const panel = this.usagePanel;
+    if (!panel) return;
+    panel.dispose();
+    this.usagePanel = null;
+    this.usageOpen = false;
+    window.__dshPetDebug.usageOpen = false;
+    this.renderBubble();
+    if (!this.menuOpen && !this.chatOpen && !this.todoOpen) this.setInteractive(false);
   },
 
   // 「回到初始位置」菜单：停掉漫游/移动，清掉会话位置，回到配置角落

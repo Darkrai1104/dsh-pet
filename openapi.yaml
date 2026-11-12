@@ -96,6 +96,8 @@ tags:
     description: 字体、通知图标、表情包、动画素材
   - name: Voice
     description: 语音合成——参数校验、排队与缓存都在宿主，成功时直接返回 mp3 文件
+  - name: Usage
+    description: 用量查询——左键打开面板时现查 Cursor、Codex、Grok 与 Clash，不写 State
 
 paths:
   /dsh-pet-7340/state:
@@ -336,6 +338,30 @@ paths:
                 $ref: "#/components/schemas/OkResponse"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
+
+  /dsh-pet-7340/usage:
+    get:
+      tags: [Usage]
+      operationId: queryUsage
+      summary: 现查订阅用量与 Clash 流量
+      description: |
+        同时查询本机已登录的 Cursor、Codex、Grok，以及 Clash Verge Rev 的订阅流量。
+        只在面板打开时调用，不写入 `sections`，也不刷新宠物动画。
+
+        四个来源各自成功或失败：某一条 `ok: false` 不影响其余条目，失败条目不带数字。
+        Grok 的 Cookie 来自环境变量 `DSH_PET_GROK_COOKIE` 或凭证 `GROK_SESSION_COOKIE`；
+        都没有时，若本机 `~/.grok/auth.json` 有未过期的 CLI token，改走 CLI 账单接口。
+      responses:
+        "200":
+          description: 四个来源都已给出结论（含失败条目）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /dsh-pet-7340/environment:
     post:
@@ -3344,6 +3370,76 @@ components:
           type: boolean
           const: true
       description: 动作已完成。数据请从 `GET /state` 读取。
+
+    UsageResponse:
+      type: object
+      required: [ok, items]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsageItem"
+      description: 四个来源各一条，顺序为 Cursor、Codex、Grok、Clash。
+
+    UsageItem:
+      oneOf:
+        - $ref: "#/components/schemas/UsageItemOk"
+        - $ref: "#/components/schemas/UsageItemFailed"
+
+    UsageItemOk:
+      type: object
+      required: [source, ok, label, rows]
+      properties:
+        source:
+          type: string
+          enum: [cursor, codex, grok, clash]
+        ok:
+          type: boolean
+          const: true
+        label:
+          type: string
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsageRow"
+
+    UsageRow:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        used:
+          type: number
+        limit:
+          type: number
+        percent:
+          type: number
+          description: 已用百分比。0 表示未消耗，可以超过 100。
+        resetsAt:
+          type: string
+          description: 重置或到期时间，ISO 8601。
+        text:
+          type: string
+
+    UsageItemFailed:
+      type: object
+      required: [source, ok, reason]
+      properties:
+        source:
+          type: string
+          enum: [cursor, codex, grok, clash]
+        ok:
+          type: boolean
+          const: false
+        reason:
+          type: string
+          enum: [credential-missing, fetch-error, unsupported]
+        message:
+          type: string
 
     FocusSessionResponse:
       type: object

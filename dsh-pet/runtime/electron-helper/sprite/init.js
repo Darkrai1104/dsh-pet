@@ -130,6 +130,9 @@ Object.assign(PetSprite.prototype, {
     // todoPanel 是面板句柄（占气泡槽，节点塞在 this.bubble 里），todoOpen 是穿透守卫标记。
     this.todoPanel = null;
     this.todoOpen = false;
+    // 用量面板与待办共用气泡槽：usagePanel 是句柄，usageOpen 是穿透守卫。
+    this.usagePanel = null;
+    this.usageOpen = false;
   },
 
   /** 建 DOM 并把首帧位置落到窗口；布局数值全部来自上面算好的 geometry。 */
@@ -246,7 +249,7 @@ Object.assign(PetSprite.prototype, {
         // 切走时松手收不到 keyup：不在这里收尾，录音会一直开到 24 秒上限
         this.hearHold.release();
         if (this.dragState.active) this.onPointerUp();
-        if (!this.chatOpen && !this.todoOpen) this.setInteractive(false);
+        if (!this.chatOpen && !this.todoOpen && !this.usageOpen) this.setInteractive(false);
       },
       { signal: ac.signal },
     );
@@ -256,7 +259,7 @@ Object.assign(PetSprite.prototype, {
         // 光标离开窗口：菜单若开着立刻收起（窗口内 DOM，离开即不可达），再恢复穿透。
         // 拖拽中与对话弹窗开着都不恢复：前者会绕过 busy 并丢失 pointerup，后者要留光标回来点输入框。
         this.closeMenu();
-        if (!this.chatOpen && !this.todoOpen && !this.dragState.active) this.setInteractive(false);
+        if (!this.chatOpen && !this.todoOpen && !this.usageOpen && !this.dragState.active) this.setInteractive(false);
       },
       { signal: ac.signal },
     );

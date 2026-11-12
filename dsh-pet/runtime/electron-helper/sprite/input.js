@@ -245,6 +245,7 @@ Object.assign(PetSprite.prototype, {
       this.menuOpen ||
       this.chatOpen ||
       this.todoOpen ||
+      this.usageOpen ||
       this.balanceClickable() ||
       this.workClickable()
     );
@@ -285,7 +286,9 @@ Object.assign(PetSprite.prototype, {
     const rects = [];
     // 控件矩形 = 主进程允许接收点击的区域，矩形外继续穿透。可点的余额气泡悬在余量区，不登记就点不到。
     const controls = [
-      ...document.querySelectorAll('.dsh-pet-menu-column, .dsh-pet-chat, .dsh-pet-todo, .pet-bubble.is-clickable'),
+      ...document.querySelectorAll(
+        '.dsh-pet-menu-column, .dsh-pet-chat, .dsh-pet-todo, .dsh-pet-usage, .pet-bubble.is-clickable',
+      ),
     ];
     for (const el of this.inputRegionElements) {
       if (!controls.includes(el)) {
@@ -337,7 +340,7 @@ Object.assign(PetSprite.prototype, {
       return;
     }
     // 右键菜单/对话弹窗/待办面板开启：整窗保持可交互，关闭后恢复命中区判定
-    if (this.menuOpen || this.chatOpen || this.todoOpen) {
+    if (this.menuOpen || this.chatOpen || this.todoOpen || this.usageOpen) {
       this.syncInputRegions(); // 级联菜单按悬停增减面板，及时更新占用区域
       this.setInteractive(true);
       this.setTip(false); // 菜单/弹窗期间提示让位，不跟浮层抢注意力
@@ -381,7 +384,7 @@ Object.assign(PetSprite.prototype, {
       this.stopMove();
       return;
     }
-    this.stopThrow(); // 点击飞行中的宠物 = 收手停住（再播点击回应）
+    this.stopThrow(); // 点击飞行中的宠物 = 收手停住。
     this.stopMove();
     // 睡觉：点一下就是叫醒。挤压与音效照常（手感与平时一致），但不播点击回应动画——
     // 叫醒的表现由 /wake 写回的 sleep 叶子驱动（end 播一遍，播完回随机链）。
@@ -391,21 +394,18 @@ Object.assign(PetSprite.prototype, {
       const front = this.front === 0 ? this.videoA : this.videoB;
       if (front) this.startSquash(front);
       this.postSleepAction('wake');
-      // 入睡过渡里被点：这次入睡作废，按普通点击播回应动画——「起来」那段不再播。
+      // 入睡过渡里被点：这次入睡作废，按普通点击打开用量面板——「起来」那段不再播。
       // 先本地清状态：等叶子回来时 setSleep 会因「本来没睡」直接返回，不会插一段 end。
       if (this.sleepPhase === 'start') {
         this.sleeping = false;
         this.sleepSet = null;
         this.sleepPhase = null;
-        if (this.animations.clicks.length) this.playOnce(S.pick(this.animations.clicks));
+        this.toggleUsage();
       }
       return;
     }
-    // 点击音效与浏览器同位置：放在「按下已触发积分」的早退之后、点击动画判断之前
-    playClickSound();
-    if (!this.animations.clicks.length) return;
-    this.pendingSquash = true; // 等新点击动画切到前台后 Q 弹（压新首帧，与浏览器一致）
-    this.playOnce(S.pick(this.animations.clicks));
+    // 醒着的左键不换动画、不压 Q 弹、不出声：这次点击只开关用量面板。
+    this.toggleUsage();
   },
 
   // 右键菜单（统一自绘组件：树与渲染都来自 shared-core 的同一份 menu 模块）

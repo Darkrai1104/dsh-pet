@@ -25,6 +25,7 @@ function input(overrides: Partial<BubbleSlotInput> = {}): BubbleSlotInput {
     envOn: false,
     envAvailable: true,
     todoOn: false,
+    usageOn: false,
     ...overrides,
   };
 }
@@ -117,6 +118,11 @@ describe('decideBubbleSlot —— 同一时刻只挂一个气泡', () => {
       }),
     );
     assert.equal(slot, 'todo');
+  });
+
+  test('用量面板压过说话，但让位给待办', () => {
+    assert.equal(decideBubbleSlot(input({ usageOn: true, whisperOn: true, whisperText: '在' })), 'usage');
+    assert.equal(decideBubbleSlot(input({ usageOn: true, todoOn: true })), 'todo');
   });
 });
 

@@ -6,7 +6,6 @@
  */
 import { createDrag, type Drag, type DragCard } from '../motion/drag.ts';
 import { boxToRatio, clampReachableBox } from '../motion/geometry.ts';
-import { playClickSound } from '../click-sound.ts';
 import type { CardLive } from './live.ts';
 import type { CardMotion } from './motion.ts';
 import type { CardStateApi } from './state.ts';
@@ -71,7 +70,6 @@ export function createCardDrag(rt: CardDragRuntime) {
         physics: cfgRef.current.physics,
         // 睡着时不给拖拽动画：可以拖、位置跟手，但保持睡姿（空池 = 驱动退化为只拖不换源）
         dragAnims: (live.current.flow?.sleeping() ?? false) ? [] : cfgRef.current.animations.drag,
-        clickAnims: cfgRef.current.animations.clicks,
         // 松手同理：睡着时不给回 idle 的动画，否则拖一下就把睡姿换掉了
         idleAnims: (live.current.flow?.sleeping() ?? false) ? [] : cfgRef.current.animations.idle,
         currentAnim: card.animRef.current,
@@ -88,7 +86,6 @@ export function createCardDrag(rt: CardDragRuntime) {
         isFrozen: () => live.current.ownAnim.isFrozen(),
         releaseLock: () => live.current.releaseLock(),
         grabVelocity: () => (motion.flight.isFlying() ? motion.flight.velocity() : null),
-        playClickSound: () => playClickSound(),
         tipOn: () => live.current.tipOn(),
         placeTip: (x, y) => live.current.placeTip(x, y),
         setTipOn,

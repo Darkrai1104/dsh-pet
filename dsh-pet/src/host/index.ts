@@ -24,6 +24,8 @@ import { registerTodoReminders } from './plugin/todo-reminders.ts';
 import { createVoiceService } from './voice/speak.ts';
 import { createHearService } from './voice/hear.ts';
 import { TODO_FILE_NAME, TodoStore } from './todo/store.ts';
+import { resolveGrokCookie } from './usage/grok.ts';
+import { queryAllUsage } from './usage/index.ts';
 import { join } from 'node:path';
 import type { PetRouteDeps } from './routes/types.ts';
 
@@ -108,6 +110,8 @@ export function apply(ctx: any): void {
     todos,
     // 环境查询：/environment 与 system 时间行共用同一个取数口
     environment: (opts?: { fresh?: boolean }) => currentEnvironment({ force: opts?.fresh === true }),
+    queryUsage: queryAllUsage,
+    readGrokCookie: () => resolveGrokCookie(ctx),
     // 语音合成：缓存落 userRoot，失败只留日志，不打断宿主
     voice: createVoiceService({ userRoot, log }),
     // 语音识别：能力来自宿主（DSH 的 speechToText），没启用时服务自己在调用时回 unsupported

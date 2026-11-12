@@ -53,10 +53,18 @@ Object.assign(PetSprite.prototype, {
     // 待办面板占气泡槽且优先级最高：它是用户主动打开的窗口，其余气泡一律让位。
     // 面板是外部塞进来的 DOM，重建 innerHTML 会把它自己抹掉，所以这一段只补显隐与让位。
     this.bubble.classList.toggle('dsh-pet-todo-bubble', this.todoOpen);
+    this.bubble.classList.toggle('dsh-pet-usage-bubble', this.usageOpen && !this.todoOpen);
     if (this.todoOpen) {
       this.bubble.classList.remove('is-whisper', 'is-clickable', 'is-expanded', S.MEME_BUBBLE_CLASS);
       this.bubble.classList.add('is-on');
       window.__dshPetDebug.lastBubbleTitle = '待办事项';
+      this.syncInputBusy();
+      return;
+    }
+    if (this.usageOpen) {
+      this.bubble.classList.remove('is-whisper', 'is-clickable', 'is-expanded', S.MEME_BUBBLE_CLASS);
+      this.bubble.classList.add('is-on');
+      window.__dshPetDebug.lastBubbleTitle = '用量';
       this.syncInputBusy();
       return;
     }

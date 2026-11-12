@@ -63,8 +63,6 @@ export interface DragCard {
   physics: PhysicsParams;
   /** 拖拽动画池。 */
   dragAnims: string[];
-  /** 点击动画池。 */
-  clickAnims: string[];
   /** 待机动画池。 */
   idleAnims: string[];
   /** 当前动画名，抽待机时用来避开自己。 */
@@ -91,8 +89,6 @@ export interface DragCard {
   releaseLock: () => void;
   /** 抓取瞬间的飞行速度；没在飞时为 null。 */
   grabVelocity: () => { vx: number; vy: number } | null;
-  /** 点击音效。 */
-  playClickSound: () => void;
   /** 悬浮提示是否点亮。 */
   tipOn: () => boolean;
   /** 把提示摆到光标旁。 */
@@ -117,8 +113,8 @@ export interface Drag {
   onPointerMove(e: ReactNS.PointerEvent<HTMLDivElement>): void;
   /** 松开与取消：结算拖拽或抛掷，并复位悬浮提示。 */
   onPointerUp(e: ReactNS.PointerEvent<HTMLDivElement>): void;
-  /** 点击：播放点击动画并触发 Q 弹。 */
-  onClick(): void;
+  /** 点击：停飞与自主走动。返回这次是不是一次真正的点击（拖拽尾巴与积分按下为 false）。 */
+  onClick(): boolean;
   /** 停弹簧跟随，不碰指针捕获状态。 */
   stopFollow(): void;
   /** 摘掉鼠标松开兜底监听；卸载时调用，之后这个驱动不可再用。 */
@@ -426,29 +422,19 @@ export function createDrag(card: () => DragCard): Drag {
     endPress(card(), { x: e.clientX, y: e.clientY, hit: e.currentTarget });
   };
 
-  const onClick = (): void => {
+  const onClick = (): boolean => {
     const c = card();
-    if (press.active || press.dragging || performance.now() < justDraggedUntil) return;
-    // 本次按下已触发过积分：只收手停住，不再播普通点击动画。
+    if (press.active || press.dragging || performance.now() < justDraggedUntil) return false;
+    // 本次按下已触发过积分：只收手停住。用量面板也不开，避免「打分」顺手弹出一张表。
     if (pressScoreFired) {
       pressScoreFired = false;
       c.stopFlight();
       c.stopAutonomy();
-      return;
+      return false;
     }
     c.stopFlight(); // 点击飞行中的宠物即收手停住。
     c.stopAutonomy();
-    // 点击音效放在所有「不播点击动画」的早退分支之后。
-    c.playClickSound();
-    c.setOnce(true);
-    if (!c.clickAnims.length) return;
-    const name = pick(c.clickAnims);
-    log(c.petId, '-> [CLICK] ' + name);
-    c.markSquash(); // 等新点击动画切到前台后再压新首帧。
-    // 单动画点击时状态不变，effect 不会重放；递增 seq 强制 switchTo 走一遍，
-    // 防重分支负责消费 Q 弹标记。
-    c.bumpSeq();
-    c.playAnim(name);
+    return true;
   };
 
   return {

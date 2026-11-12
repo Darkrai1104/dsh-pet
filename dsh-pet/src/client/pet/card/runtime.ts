@@ -12,6 +12,7 @@ import { resolveFontPx } from '../../../shared/fonts.ts';
 import { resolvePetSizePx } from '../../../shared/pet-size.ts';
 import { makeBalanceBubble, makeEnvBubble, makeWhisperBubble } from '../../bubble.ts';
 import { makeTodoBubble } from '../../todo-bubble.ts';
+import { makeUsageBubble } from '../../usage-bubble.ts';
 import { petBridge } from '../../settings.ts';
 import { playClickSound } from '../click-sound.ts';
 import { createMenuActions, type MenuActions } from '../menu-actions.ts';
@@ -48,10 +49,18 @@ export function createCardRuntime(rt: PetRuntime) {
   const WhisperBubble = makeWhisperBubble({ h });
   /** 待办气泡：面板本体挂在自己身上，关闭按钮回调装配根。 */
   const TodoBubble = makeTodoBubble({ h, useEffect, useRef });
-  /** 四种气泡的单槽：显隐、停留计时与优先级都在这里。 */
+  /** 用量气泡：面板本体挂在自己身上，关闭按钮回调装配根。 */
+  const UsageBubble = makeUsageBubble({ h, useEffect, useRef });
+  /** 气泡单槽：显隐、停留计时与优先级都在这里。 */
   const useBubbleSlots = createBubbleSlots(
     { h, useState, useEffect, useRef },
-    { balanceBubble: BalanceBubble, envBubble: EnvBubble, todoBubble: TodoBubble, whisperBubble: WhisperBubble },
+    {
+      balanceBubble: BalanceBubble,
+      envBubble: EnvBubble,
+      todoBubble: TodoBubble,
+      usageBubble: UsageBubble,
+      whisperBubble: WhisperBubble,
+    },
   );
   const useCardState = createCardState({ useState, useRef });
   const useLockFreeze = createLockFreeze({ useEffect, useRef });
@@ -314,9 +323,10 @@ export function createCardRuntime(rt: PetRuntime) {
           void postAction(ROUTE_PATH + '/wake?pet=' + encodeURIComponent(cfg.id));
           return;
         }
-        // 入睡过渡里被点：这次入睡作废，按普通点击处理（挤压 + 音效 + 点击回应），不再播「起来」
+        // 入睡过渡里被点：这次入睡作废，按普通点击处理（打开用量面板），不再播「起来」。
         if (phase === 'start') void postAction(ROUTE_PATH + '/wake?pet=' + encodeURIComponent(cfg.id));
-        drag.onClick();
+        // 醒着的左键不再换动画、不压 Q 弹、不出声：这次点击只开关用量面板。
+        if (drag.onClick()) bubbles.toggleUsage();
       },
       onContextMenu: entry.handleContextMenu,
       onPointerDown: drag.onPointerDown,

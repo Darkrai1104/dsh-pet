@@ -130,7 +130,6 @@ function harness(extra: Partial<DragCard> = {}) {
     plays: [] as string[],
     flights: [] as Array<{ px: number; py: number; vx: number; vy: number }>,
     places: [] as Array<{ x: number; y: number }>,
-    clicks: 0,
     squashes: 0,
     seqs: 0,
     tipOn: [] as boolean[],
@@ -142,7 +141,6 @@ function harness(extra: Partial<DragCard> = {}) {
     halfH: 56.25,
     physics: DEFAULT_PHYSICS,
     dragAnims: ['drag1'],
-    clickAnims: ['click1'],
     idleAnims: ['idle1'],
     currentAnim: 'idle1',
     setOnce: () => {},
@@ -166,9 +164,6 @@ function harness(extra: Partial<DragCard> = {}) {
       calls.releaseLock++;
     },
     grabVelocity: () => null,
-    playClickSound: () => {
-      calls.clicks++;
-    },
     tipOn: () => false,
     placeTip: () => {},
     setTipOn: (on) => calls.tipOn.push(on),
@@ -434,17 +429,17 @@ describe('createDrag —— 按压已结束时松手', () => {
 });
 
 describe('createDrag —— 点击', () => {
-  test('单击：点击音效 + 点击动画 + 标记 Q 弹 + 递增换源序号', () => {
+  test('单击：不停动画、不出声，并返回 true', () => {
     const frames = withFakeFrames();
     try {
       const { drag, el, calls } = harness();
       drag.onPointerDown(pointer(el, 500, 350));
       drag.onPointerUp(pointer(el, 500, 350));
-      drag.onClick();
-      assert.equal(calls.clicks, 1);
-      assert.deepEqual(calls.plays, ['click1']);
-      assert.equal(calls.squashes, 1);
-      assert.equal(calls.seqs, 1);
+      assert.equal(drag.onClick(), true);
+      assert.deepEqual(calls.plays, []);
+      assert.equal(calls.squashes, 0);
+      assert.equal(calls.seqs, 0);
+      assert.ok(calls.stopFlight >= 1, '点击应该收手停住');
     } finally {
       frames.restore();
     }
@@ -459,25 +454,11 @@ describe('createDrag —— 点击', () => {
       frames.advance(400);
       drag.onPointerUp(pointer(el, 540, 350));
       assert.equal(drag.justDragged(), true);
-      drag.onClick();
-      assert.equal(calls.clicks, 0);
+      const played = calls.plays.length;
+      assert.equal(drag.onClick(), false);
+      assert.equal(calls.plays.length, played, '拖拽尾巴上的 click 不该再换动画');
       frames.advance(150);
-      drag.onClick();
-      assert.equal(calls.clicks, 1);
-    } finally {
-      frames.restore();
-    }
-  });
-
-  test('点击动画池为空：照样出声，但不播动画', () => {
-    const frames = withFakeFrames();
-    try {
-      const { drag, el, calls } = harness({ clickAnims: [] });
-      drag.onPointerDown(pointer(el, 500, 350));
-      drag.onPointerUp(pointer(el, 500, 350));
-      drag.onClick();
-      assert.equal(calls.clicks, 1);
-      assert.deepEqual(calls.plays, []);
+      assert.equal(drag.onClick(), true);
     } finally {
       frames.restore();
     }
