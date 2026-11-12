@@ -269,6 +269,12 @@ Object.assign(PetSprite.prototype, {
     if (window.petBridge && typeof window.petBridge.onPointerLeft === 'function') {
       window.petBridge.onPointerLeft(() => this.setTip(false));
     }
+    // 点到别的窗口或桌面：只收用量面板。菜单和待办不跟这次失焦走。
+    if (window.petBridge && typeof window.petBridge.onWindowBlur === 'function') {
+      window.petBridge.onWindowBlur(() => {
+        if (this.usageOpen) this.closeUsage();
+      });
+    }
 
     this.subscribeCollision();
   },

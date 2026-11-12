@@ -247,6 +247,29 @@ describe('菜单/聊天框只占控件矩形，不吞掉其它应用点击', () 
       false,
     );
   });
+  test('用量面板登记整窗矩形：窗口内任意点不再穿透，窗外仍穿透', () => {
+    const full = { dragging: false, rects: [{ x: 0, y: 0, width: bounds.width, height: bounds.height }] };
+    assert.equal(decideWindowIgnore(bounds, { x: bounds.x + 10, y: bounds.y + 10 }, true, true, 0, full), false);
+    assert.equal(
+      decideWindowIgnore(
+        bounds,
+        { x: bounds.x + bounds.width - 2, y: bounds.y + bounds.height - 2 },
+        true,
+        true,
+        0,
+        full,
+      ),
+      false,
+    );
+    assert.equal(decideWindowIgnore(bounds, { x: bounds.x - 20, y: bounds.y + 100 }, false, true, 0, full), true);
+  });
+  test('只登记气泡矩形：气泡外的窗口余量仍然穿透，宠物身上仍可点', () => {
+    const bubble = { dragging: false, rects: [{ x: 10, y: 10, width: 80, height: 40 }] };
+    assert.equal(decideWindowIgnore(bounds, { x: bounds.x + 20, y: bounds.y + 20 }, true, true, 0, bubble), false);
+    assert.equal(decideWindowIgnore(bounds, { x: bounds.x + 200, y: bounds.y + 20 }, false, true, 0, bubble), true);
+    const hit = spriteHitRect(bounds);
+    assert.equal(decideWindowIgnore(bounds, { x: hit.left + 1, y: hit.top + 1 }, true, true, 0, bubble), false);
+  });
   test('多级菜单的每个面板都可交互，面板间的透明间隙保持穿透', () => {
     const cascade = { dragging: false, rects: [...input.rects, { x: 180, y: 10, width: 150, height: 300 }] };
     assert.equal(decideWindowIgnore(bounds, { x: 1190, y: 520 }, true, true, 0, cascade), false);

@@ -83,4 +83,8 @@ contextBridge.exposeInMainWorld('petBridge', {
   onPointerLeft(cb) {
     ipcRenderer.on('pet:pointer-left', () => cb());
   },
+  // 窗口失焦：点到别的程序或桌面。渲染端据此收起用量面板，这次点击仍落在那个程序上。
+  onWindowBlur(cb) {
+    ipcRenderer.on('pet:window-blur', () => cb());
+  },
 });

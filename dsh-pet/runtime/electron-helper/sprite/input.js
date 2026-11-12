@@ -306,6 +306,15 @@ Object.assign(PetSprite.prototype, {
         rects.push({ x: toScreen(r.x), y: toScreen(r.y), width: toScreen(r.width), height: toScreen(r.height) });
       }
     }
+    // 用量面板开着时整窗都接收点击：气泡以外的左键要能关面板，透明余量不能再穿透。
+    if (this.usageOpen) {
+      rects.push({
+        x: 0,
+        y: 0,
+        width: toScreen(window.innerWidth),
+        height: toScreen(window.innerHeight),
+      });
+    }
     const input = { dragging: this.dragState.active, rects };
     const key = JSON.stringify(input);
     if (key === this._inputRegions) return;

@@ -394,6 +394,8 @@ Object.assign(PetSprite.prototype, {
     this.usagePanel = panel;
     this.usageOpen = true;
     window.__dshPetDebug.usageOpen = true;
+    // 窗口平时 showInactive、不拿焦点；拿到焦点后，点别的窗口或桌面会失焦，渲染端据此关掉面板。
+    if (window.petBridge && window.petBridge.requestKeyboardFocus) window.petBridge.requestKeyboardFocus();
     this.renderBubble();
     this.syncInputBusy();
     this.setInteractive(true);

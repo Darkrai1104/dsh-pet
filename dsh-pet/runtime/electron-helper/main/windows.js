@@ -260,6 +260,10 @@ function createWindows({
         if (!win.isDestroyed() && !win.isVisible()) win.showInactive();
       }, 400);
     });
+    // 点到窗口外面：失焦通知渲染端。用量面板开着时据此收起，点击本身仍交给被点中的窗口。
+    win.on('blur', () => {
+      if (!win.isDestroyed()) win.webContents.send('pet:window-blur');
+    });
     const stopPointerFallback = startPointerFallback(win);
     const stopTopmostWatchdog = startTopmostWatchdog(win);
     win.on('closed', () => {
